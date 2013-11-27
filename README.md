@@ -7,7 +7,7 @@ much memory or can't express **all** valid JSON structures.
 
 ToJSON is ORM and ruby web framework agnostic and designed for serving fast and flexible JSON APIs.
 
-# Installation
+## Installation
 
 Add this line to your application's Gemfile:
 
@@ -21,7 +21,7 @@ Or install it yourself as:
 
     $ gem install to_json
 
-# Design
+## Design
 
 Pragmatism and performance is a big driver as existing solutions spend far too much time generating JSON or limit the JSON
 structure you can express.  ToJson does NOT use a Rails ActionView template approach, instead the DSL is intended to be used
@@ -36,24 +36,24 @@ than a regular method call for very minor syntactical advantage.
 
 ToJson leverages the awesome Oj gem for the fastest available JSON serialization in Ruby.
 
-# ToJson Alternatives
+## ToJson Alternatives
 
 Some alternatives to ToJson and primary diferences.
 
-## ToJson vs JBuilder
+### ToJson vs JBuilder
  + ToJson does not rely on method_missing
  + ToJson does not use templating and is both faster and more powerful because of it
  + Value conversion defers to Oj for speed
  + ToJson is ruby web framework agnostic
 
-## ToJson vs ActiveModel::Serializers
+### ToJson vs ActiveModel::Serializers
  + ToJson is ORM agnostic
  + ToJson does not try to lookup serializers based on the model class.  If you care about API versioning you will realize that the
    controller MUST decide this.
  + ToJson deferes value conversion to Oj for speed
  + ToJson does not have a DSL syntax that gets in the way of expressing any JSON structure you like.
 
-## ToJson vs RABL
+### ToJson vs RABL
  + ToJson does not have a complex (insane) syntax that prevents you expressing any JSON structure you like.
  + ToJson does not mess with the ordering serialized items.
  + ToJson DSL is simpler and far more expressive and no nasty surprises.
@@ -61,7 +61,7 @@ Some alternatives to ToJson and primary diferences.
  + ToJson supports helpers and presenter methods in the serializer class or via mixins.
  + ToJson deferes value conversion to Oj for speed
 
-## ToJson vs ROAR
+### ToJson vs ROAR
  + ToJson doesnt try to `extend` your model instances and invalidate the Ruby method cache (big perfomance killer).
  + ToJson supports helpers and presenter methods in the serializer
 class, and doesnt require lambas (required if using ROAR's decorator approach to get around the extend problem.)
@@ -71,7 +71,7 @@ class, and doesnt require lambas (required if using ROAR's decorator approach to
  + ToJson is currently one-way serialization (ROAR is bi-directional)
  + Roar has explicit suppor for JSON+HAL, but you can easily express JSON+HAL in ToJson (example below).
 
-# Benchmarks
+## Benchmarks
 
 Simulate encoding 10,000 objects with 20 attributes each, approx 800 bytes per item (7.6Mb total):
 
@@ -101,7 +101,7 @@ end
 
 TODO. Add ROAR and RABL to benchmark.
 
-# Usage
+## Usage
 
 ## General Invocation with block
 
@@ -113,7 +113,7 @@ TODO. Add ROAR and RABL to benchmark.
 end
 ```
 
-## Invocation from Rails controller with block
+### Invocation from Rails controller with block
 
 ```ruby
 def index
@@ -125,7 +125,7 @@ def index
 end
 ```
 
-## Invocation from Rails controller with custom serializer class (recommended)
+### Invocation from Rails controller with custom serializer class (recommended)
 
 ```ruby
 def index
@@ -134,14 +134,14 @@ def index
 end
 ```
 
-## Example creating a top level object:
+### Example creating a top level object:
 
 ```ruby
 put :title, @post.title
 put :body, @post.body
 ```
 
-## Example creating a top level object with root property name
+### Example creating a top level object with root property name
 
 ```ruby
 put :post do
@@ -150,7 +150,7 @@ put :post do
 end
 ```
 
-## Example creating a top level object with root property name, passing item to the block
+### Example creating a top level object with root property name, passing item to the block
 
 ```ruby
 put :latest_post, current_user.posts.order(:created_at: :desc).first do |post|
@@ -159,7 +159,7 @@ put :latest_post, current_user.posts.order(:created_at: :desc).first do |post|
 end
 ```
 
-## Example creating a top level array:
+### Example creating a top level array:
 
 ```ruby
 array @posts do |post|
@@ -169,7 +169,7 @@ array @posts do |post|
 end
 ```
 
-## Example creating a paged collection as per the HAL specification:
+### Example creating a paged collection as per the HAL specification:
 
 ```ruby
 put :meta do
@@ -189,7 +189,7 @@ put :_links do
 end
 ```
 
-## Example creating a top level array with a nested object and collection
+### Example creating a top level array with a nested object and collection
 
 ```ruby
 array do
@@ -204,19 +204,19 @@ array do
 end
 ```
 
-## Example of an array literal
+### Example of an array literal
 
 ```ruby
 array ['Fred', 'fred@example.com', 27]
 ```
 
-## Example of a hash literal
+### Example of a hash literal
 
 ```ruby
-value {name: 'Fred', email: 'fred@example.com', age: 27}
+put :author, {name: 'Fred', email: 'fred@example.com', age: 27}
 ```
 
-## Example of nested arrays and array values:
+### Example of nested arrays and array values:
 
 ```ruby
 array do
@@ -234,7 +234,7 @@ array do
 end
 ```
 
-## Example of implicit root level array
+### Example of implicit root level array
 
 ```ruby
 # calling value at the root level implicitly creates a root level array
@@ -249,7 +249,7 @@ array @posts do
   put :body, post.body
 end
 
-## Example of defining and using a helper
+### Example of defining and using a helper
 
 def fullname(*names)
   names.join(' ')
@@ -258,7 +258,7 @@ end
 put :author, fullname(@post.author.first_name, @post.author.last_name)
 ```
 
-## Example of class based serialization and composition:
+### Example of class based serialization and composition:
 
 ```ruby
 
@@ -310,8 +310,6 @@ module PostSerialization
     put :collection, posts.each(&:serialize_post)
   end
 end
-
-
 ```
 
 
