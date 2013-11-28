@@ -73,18 +73,24 @@ class, and doesnt require lambas (required if using ROAR's decorator approach to
 
 ## Benchmarks
 
+```
+$ test/benchmark
+$ bundle install
+$ ./benchmark.rb
+
+                    user     system      total        real
+ToJson (class)  2.010000   0.020000   2.030000 (  2.032673)
+ToJson (block)  3.400000   0.030000   3.430000 (  3.459350)
+Jbuilder        6.980000   0.030000   7.010000 (  7.116469)
+JSONBuilder    13.250000   0.070000  13.320000 ( 13.418005)
+```
+
 Simulate encoding 10,000 objects with 20 attributes each, approx 800 bytes per item (7.6Mb total):
 
 ```ruby
 require 'benchmark'
 require 'to_json'
 require 'jbuilder'
-
-class FooBarSerializer < ToJson::Serializer
-  def serialize
-    20.times { |n| put "foo-#{n}", ('bar' * n) }
-  end
-end
 
 enough = 10000
 Benchmark.bm do |x|
