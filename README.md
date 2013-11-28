@@ -362,15 +362,15 @@ put :author, fullname(@post.author.first_name, @post.author.last_name)
 
 ### Example of class based serialization and composition:
 
-```ruby
 
+```ruby
 # A Post model serializer
 class PostSerializer < ToJson::Serializer
   include PostSerialization
 
   # override the build method and use the ToJson DSL
   def serialize
-    build_post_with_root scope
+    serialize_post_with_root scope
   end
 end
 
@@ -379,7 +379,7 @@ class PostsSerializer < ToJson::Serializer
   include PostSerialization
 
   def serialize
-    build_posts scope
+    serialize_posts scope
   end
 end
 
