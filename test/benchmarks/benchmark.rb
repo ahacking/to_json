@@ -6,14 +6,13 @@ require 'oj'
 require 'to_json'
 require 'jbuilder'
 require 'json_builder'
+require 'jsonify'
 
 enough = 50_000
 puts "JSONBuilder original benchmark (#{enough} complex objects):"
 
 Benchmark.bm(15) do |b|
-
-  times = []
-  times << b.report('ToJson (class)') do
+  b.report('ToJson (class)') do
     class BenchmarkSerializer < ToJson::Serializer
       def serialize
         put :name, "Garrett Bjerkhoel"
@@ -42,7 +41,7 @@ Benchmark.bm(15) do |b|
       BenchmarkSerializer.new
     }
   end
-  times << b.report('ToJson (block)') do
+  b.report('ToJson (block)') do
     enough.times {
       ToJson::Serializer.new {
         put :name, "Garrett Bjerkhoel"
@@ -68,7 +67,7 @@ Benchmark.bm(15) do |b|
       }
     }
   end
-  times <<  b.report('Jbuilder') do
+  b.report('Jbuilder') do
     enough.times {
       Jbuilder.encode { |json|
         json.name "Garrett Bjerkhoel"
@@ -94,7 +93,7 @@ Benchmark.bm(15) do |b|
       }
     }
   end
-  times << b.report('JSONBuilder') do
+  b.report('JSONBuilder') do
     enough.times {
       JSONBuilder::Compiler.generate {
         name "Garrett Bjerkhoel"
@@ -118,6 +117,32 @@ Benchmark.bm(15) do |b|
         single_skills ['ruby', 'php', 'mysql', 'mongodb', 'haproxy']
         booleans [true, true, false, nil] 
       }
+    }
+  end
+  b.report('jsonify') do
+    enough.times {
+      json = Jsonify::Builder.new
+      json.name "Garrett Bjerkhoel"
+      json.birthday Time.local(1991, 9, 14)
+      json.street do
+        json.address "1143 1st Ave"
+        json.address2 "Apt 200"
+        json.city "New York"
+        json.state "New York"
+        json.zip 10065
+      end
+      json.skills do
+        json.ruby true
+        json.asp false
+        json.php true
+        json.mysql true
+        json.mongodb true
+        json.haproxy true
+        json.marathon false
+      end
+      json.single_skills ['ruby', 'php', 'mysql', 'mongodb', 'haproxy']
+      json.booleans [true, true, false, nil] 
+      json.compile!
     }
   end
 end
