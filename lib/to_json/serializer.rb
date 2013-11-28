@@ -59,23 +59,26 @@ class ToJson::Serializer
   end
 
   def array(collection = nil, &block)
-    raise InvalidStructure('Cannot put unnamed value into a JSON object ') if @_node.is_a? Hash
-
     @_node ||= []
 
-    if block
-      if collection.nil?
-        yield
-      else
-        collection.each do |item|
-          yield item
-          # we support an implicit call to 'value' if the block calls 'put' to create named values
-          # therefore we need to ensure we always clear out @_object
-          @_object = null
-        end
-      end
+    if ! @_node.is_a? Array
+      # call 'value' to implicitly create an outer array
+      value(collection, &block)
     else
-      @_node = collection || []
+      if block
+        if collection.nil?
+          yield
+        else
+          collection.each do |item|
+            yield item
+            # we support an implicit call to 'value' if the block calls 'put' to create named values
+            # therefore we need to ensure we always clear out @_object
+            @_object = null
+          end
+        end
+      else
+        @_node = collection || []
+      end
     end
 
     # return the node so that if array is called inside a block we yield the array
@@ -83,12 +86,24 @@ class ToJson::Serializer
   end
 
   def value(value=nil, &block)
-    # create an array if needed
-    @_node ||= []
-    raise InvalidStructure('value can only be used within an array') unless @_node.is_a? Array
+    # resolve the value
+    value = _value(value, &block)
 
-    # return the node so that the last value in a block yields the entire array
-    @_node << _value(value, &block)
+    if @_node.nil?
+      # when node is undefined, calling 'value' just puts an object
+      @_node = value
+    else
+      if ! @_node.is_a? Array
+        # when node is not an array, implicitly create an array containing the current node and the new value
+        @_node = [@_node, value]
+      else
+        # node is an array already, just add value to it
+        @_node << value
+      end
+    end
+
+    # return the node so that the last value in a block yields the array
+    @_node
   end
 
   def put(key, value=nil, &block)

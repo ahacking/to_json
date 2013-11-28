@@ -134,14 +134,21 @@ def index
 end
 ```
 
-### Example creating a top level object:
+### JSON Objects
+
+The `put` method is used to serialize named object values and
+create arbitarily nested objects.
+
+All values will be serialized according to Oj processing rules.
+
+#### Example creating an object with named values:
 
 ```ruby
 put :title, @post.title
 put :body, @post.body
 ```
 
-### Example creating a top level object with root property name
+#### Example creating a nested object
 
 ```ruby
 put :post do
@@ -150,7 +157,23 @@ put :post do
 end
 ```
 
-### Example creating a top level object with root property name, passing item to the block
+### Example of a named object literal
+
+The hash value under 'author' will be serialized by Oj.
+
+```ruby
+put :author, {name: 'Fred', email: 'fred@example.com', age: 27}
+```
+
+### Example of an object literal
+
+The hash value will be serialized by Oj.
+
+```ruby
+value {name: 'Fred', email: 'fred@example.com', age: 27}
+```
+
+#### Example creating a nested object with argument passed to block
 
 ```ruby
 put :latest_post, current_user.posts.order(:created_at: :desc).first do |post|
@@ -159,13 +182,83 @@ put :latest_post, current_user.posts.order(:created_at: :desc).first do |post|
 end
 ```
 
-### Example creating a top level array:
+### JSON Arrays
+
+Arrays provide aggregation in JSON and are created with the `array` method.  Array
+elements can be created through:
++ a literal value passed to `array` without a block
++ evaluating blocks over the argument passed to array (similar to `each`)
++ evaluating a block with no argument
+
+Within the array block, array elements can be created using `value`, however this is
+called implicitly for you when using `put` or `array` inside the array block.
+
+### Example of an array literal
+
+The literal array value will be passed to Oj for serialization.
+
+```ruby
+array ['Fred', 'fred@example.com', 27]
+```
+
+### Example of an array collection
+
+The @posts collection will be passed to Oj for serialization.
+
+```ruby
+array @posts
+```
+
+### Example of array with block for custom object serialization
 
 ```ruby
 array @posts do |post|
-  # calling put inside an array does an implicit 'value' call placing all properties into a single object
+  # calling put inside an array does an implicit 'value' call
+  # placing all named values into a single object
   put :title, post.title
   put :body, post.body
+end
+```
+
+### Example collecting post author emails into a single array.
+
+Each post item will be processed and the email addresses of the author
+serialized.
+
+```ruby
+array @posts do |post|
+  @post.author.emails do |email|
+    value email.address
+  end
+end
+```
+
+### Example creating array element values explicitly
+
+The following example will an array containing 3 elements.
+
+```ruby
+array do
+  value 'one'
+  value 2
+  value do
+    put label: 'three'
+  end
+end
+```
+
+### Example creating array with a nested object and nested collection
+
+```ruby
+array do
+  value do
+    put :total_entries, @posts.total_entries
+    put :total_pages, @posts.total_pages
+  end
+  array @posts do
+    put :title, post.title
+    put :body, post.body
+  end
 end
 ```
 
@@ -189,65 +282,55 @@ put :_links do
 end
 ```
 
-### Example creating a top level array with a nested object and collection
+### Example of nested arrays, and dynamic array value generation:
 
 ```ruby
 array do
-  value do
-    put :total_entries, @posts.total_entries
-    put :total_pages, @posts.total_pages
-  end
-  array @posts do
-    put :title, post.title
-    put :body, post.body
-  end
-end
-```
-
-### Example of an array literal
-
-```ruby
-array ['Fred', 'fred@example.com', 27]
-```
-
-### Example of a hash literal
-
-```ruby
-put :author, {name: 'Fred', email: 'fred@example.com', age: 27}
-```
-
-### Example of nested arrays and array values:
-
-```ruby
-array do
+  # this nested array is a single value in the outer array
   array do
     value 'a'
     value 'b'
     value 'b'
   end
-  array [1,2,3]
-  # create a nested array and generate a variable number of array values for each item
-  value [1,2,3,4] do |count|
-    # generate 'count' values in the array
-    count.times { value "item #{count}" }
+  # this nested array is a single value in the outer array
+  array (1..3)
+    (1..4).each do |count|
+      # generate 'count' values in the nested array
+      count.times { value "item #{count}" }
+    end
   end
 end
 ```
 
-### Example of implicit root level array
+### Example of implicit array creation
 
 ```ruby
-# calling value at the root level implicitly creates a root level array
-value do
+# calling value here simply creates an object
+value 
   put total_entries: 123
 end
-value 'literal string'
-# because of the above value calls this array will also be nested in the implicit root array
-# rather than being a root level array
+# calling 'value' a second time implicitly creates an outer  array
+value 'some string'
+# this will also be nested inside the implicit outer array
 array @posts do
   put :title, post.title
   put :body, post.body
 end
+```
+
+### Example of implicit array creation
+
+```ruby
+# serialize an object
+put total_entries: 123
+# calling 'value' here implicitly creates an outer array
+value 'some string'
+# this will also be nested inside the outer array too
+array @posts do
+  put :title, post.title
+  put :body, post.body
+end
+```
 
 ### Example of defining and using a helper
 
