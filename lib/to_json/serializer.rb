@@ -1,3 +1,4 @@
+require 'active_support'
 require 'oj'
 
 class ToJson::Serializer
@@ -44,6 +45,10 @@ class ToJson::Serializer
   def to_json
     # cache the json
     @_json ||= Oj.dump(@_node)
+  end
+
+  def to_s
+    to_json
   end
 
   def node

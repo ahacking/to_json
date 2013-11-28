@@ -11,6 +11,10 @@ ToJSON is ORM and ruby web framework agnostic and designed for serving fast and 
 
 Add this line to your application's Gemfile:
 
+Do this for now:
+    gem 'to_json', github: 'ahacking/to_json'
+
+Eventually:
     gem 'to_json'
 
 And then execute:
@@ -23,18 +27,24 @@ Or install it yourself as:
 
 ## Design
 
-Pragmatism and performance is a big driver as existing solutions spend far too much time generating JSON or limit the JSON
-structure you can express.  ToJson does NOT use a Rails ActionView template approach, instead the DSL is intended to be used
-directly or within serializer classes. This means ToJson supports all of the expressive power of real Ruby classes including
-inheritence, mixins, delegates etc and doesnt need to implement quasi equivalents in a templating language.
+Pragmatism and performance is a big driver as existing solutions spend far too
+much time generating JSON or limit the JSON structure you can express.  ToJson
+does NOT use a Rails ActionView template approach, instead the DSL is intended
+to be used directly or within serializer classes. This means ToJson supports
+all of the expressive power of real Ruby classes including inheritence,
+mixins, delegates etc and doesnt need to implement quasi equivalents in a
+templating language.
 
-What does this mean? It means you can easily DRY up your JSON API's, easily version your API's, keep your model helpers and
-formatters scoped and not have the performance and expressive limitations of existing template approaches.
+What does this mean? It means you can easily DRY up your JSON API's, easily
+version your API's, keep your model helpers and formatters scoped and not have
+the performance and expressive limitations of existing template approaches.
 
-Additionally ToJson is designed to not require Ruby language features like method_missing because its about 7 times slower
-than a regular method call for very minor syntactical advantage.
+Additionally ToJson is designed to not require Ruby language features like
+`method_missing` because thats about 7 times slower than a regular method call
+for very minor syntactical advantage.
 
-ToJson leverages the awesome Oj gem for the fastest available JSON serialization in Ruby.
+ToJson leverages the awesome Oj gem for the fastest available JSON
+serialization in Ruby.
 
 ## ToJson Alternatives
 
@@ -42,68 +52,67 @@ Some alternatives to ToJson and primary diferences.
 
 ### ToJson vs JBuilder
  + ToJson does not rely on method_missing
- + ToJson does not use templating and is both faster and more powerful because of it
+ + ToJson does not use templating and is both faster and more powerful
+   because of it
  + Value conversion defers to Oj for speed
  + ToJson is ruby web framework agnostic
 
 ### ToJson vs ActiveModel::Serializers
  + ToJson is ORM agnostic
- + ToJson does not try to lookup serializers based on the model class.  If you care about API versioning you will realize that the
-   controller MUST decide this.
+ + ToJson does not try to lookup serializers based on the model class.  If you
+   care about API versioning you will realize that the controller MUST decide this.
  + ToJson deferes value conversion to Oj for speed
- + ToJson does not have a DSL syntax that gets in the way of expressing any JSON structure you like.
+ + ToJson does not have a DSL syntax that gets in the way of expressing any JSON
+   structure you like.
 
 ### ToJson vs RABL
- + ToJson does not have a complex (insane) syntax that prevents you expressing any JSON structure you like.
+ + ToJson does not have a complex (insane) syntax that prevents you expressing
+   any JSON structure you like.
  + ToJson does not mess with the ordering serialized items.
  + ToJson DSL is simpler and far more expressive and no nasty surprises.
  + ToJson uses real Ruby classes for inheritence, mixins and composition.
- + ToJson supports helpers and presenter methods in the serializer class or via mixins.
+ + ToJson supports helpers and presenter methods in the serializer class or via
+   mixins.
  + ToJson deferes value conversion to Oj for speed
 
 ### ToJson vs ROAR
- + ToJson doesnt try to `extend` your model instances and invalidate the Ruby method cache (big perfomance killer).
- + ToJson supports helpers and presenter methods in the serializer
-class, and doesnt require lambas (required if using ROAR's decorator approach to get around the extend problem.)
+ + ToJson doesnt try to `extend` your model instances and invalidate the Ruby
+   method cache (a big perfomance killer).
+ + ToJson supports helpers and presenter methods in the serializer class, and
+   doesnt require lambas (required if using ROAR's decorator approach to get
+   around the extend problem.)
  + ToJson uses real Ruby classes for inheritence, mixins and composition.
  + ToJson allows you to express any JSON structure you like.
  + ToJson deferes value conversion to Oj for speed
  + ToJson is currently one-way serialization (ROAR is bi-directional)
- + Roar has explicit suppor for JSON+HAL, but you can easily express JSON+HAL in ToJson (example below).
+ + Roar has explicit suppor for JSON+HAL, but you can easily express JSON+HAL
+   in ToJson (example below).
 
 ## Benchmarks
 
+You are encouraged to verify benchmarks for yourself as follows:
+
 ```
-$ test/benchmark
+$ cd test/benchmark
 $ bundle install
 $ ./benchmark.rb
-
-                    user     system      total        real
-ToJson (class)  2.010000   0.020000   2.030000 (  2.032673)
-ToJson (block)  3.400000   0.030000   3.430000 (  3.459350)
-Jbuilder        6.980000   0.030000   7.010000 (  7.116469)
-JSONBuilder    13.250000   0.070000  13.320000 ( 13.418005)
 ```
 
-Simulate encoding 10,000 objects with 20 attributes each, approx 800 bytes per item (7.6Mb total):
+On a 2006 era Macbook Pro the following timings are reported which is
+probably equivalent to a budget level hosting service:
 
-```ruby
-require 'benchmark'
-require 'to_json'
-require 'jbuilder'
-
-enough = 10000
-Benchmark.bm do |x|
-  x.report("Raw string interpolation") { enough.times {
-    20.times { |n| "foo-#{n}: #{'bar' * n }" } } }
-  x.report("ToJson (class)") { enough.times {
-    ToJson::Serializer.new { 20.times { |n| put "foo-#{n}", ('bar' * n) } } } }
-  x.report("ToJson (block)") { enough.times {
-    ToJson::Serializer.new { 20.times { |n| put "foo-#{n}", ('bar' * n) } } } }
-  x.report("Jbuilder") { enough.times {
-    Jbuilder.encode { |json| 20.times { |n| json.set! "foo-#{n}", ('bar' * n) } } } }
-end
 ```
+JSONBuilder original benchmark (50000 complex objects):
+                      user     system      total        real
+ToJson (class)    2.000000   0.030000   2.030000 (  2.033655)
+ToJson (block)    3.380000   0.030000   3.410000 (  3.430023)
+Jbuilder          7.000000   0.050000   7.050000 (  7.120131)
+JSONBuilder      13.230000   0.060000  13.290000 ( 13.390465)
+jsonify          32.660000   0.120000  32.780000 ( 32.946067)
+```
+
+As can be seen ToJson is significantly faster than the competition, in
+relative terms **Jbuilder is around 350% slower** than a ToJson serializer class.
 
 TODO. Add ROAR and RABL to benchmark.
 
@@ -126,7 +135,8 @@ def index
   @post = Post.first
   # the rails responder will call to_json on the ToJson object
   respond_with ToJson::Serializer.new do
-    # DSL goes here, contoller methods, helpers, instance variables and constants are all in scope
+    # DSL goes here, contoller methods, helpers, instance variables and
+    # constants are all in scope
   end
 end
 ```
@@ -135,7 +145,8 @@ end
 
 ```ruby
 def index
-  # we just pass the collection instead of the controller to allow for composition of JSON serializers
+  # just pass the collection (instead of the controller) to better # support
+  # composition of JSON serializers
   respond_with PostsSerializer.new(Post.all)
 end
 ```
@@ -401,6 +412,10 @@ module PostSerialization
 end
 ```
 
+## ToDo
+
++ Tests and more tests.
++ API Documentation.
 
 ## Contributing
 
