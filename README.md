@@ -111,8 +111,9 @@ JSONBuilder      13.230000   0.060000  13.290000 ( 13.390465)
 jsonify          32.660000   0.120000  32.780000 ( 32.946067)
 ```
 
-As can be seen ToJson is significantly faster than the competition, in
-relative terms **Jbuilder is around 350% slower** than a ToJson serializer class.
+As can be seen ToJson is significantly faster than the competition.
+
+In relative terms **Jbuilder is around 350% slower** than a ToJson serializer class.
 
 TODO. Add ROAR and RABL to benchmark.
 
@@ -351,6 +352,7 @@ end
 
 ### Example of defining and using a helper
 
+```ruby
 def fullname(*names)
   names.join(' ')
 end
