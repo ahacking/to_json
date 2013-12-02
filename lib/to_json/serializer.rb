@@ -9,13 +9,14 @@ class ToJson::Serializer
     end
 
     @_scope = args[0]
-    @_node = nil
-    @_object = nil
+    @_is_obj = nil
+    @_oj = Oj::StringWriter.new({mode: :compat}.merge!(opts[:oj] || {}))
     serialize(*args, &block)
+    @_oj.pop_all
   end
 
   def self.serialize_each!(enumerable, &block)
-    enumerable.map {|item| self.new(item, &block)}
+    enumerable.map { |item| self.new(item, &block) }
   end
 
   def self.json!(*args, &block)
@@ -29,104 +30,74 @@ class ToJson::Serializer
     instance_exec(*args, &block)
   end
 
-  def to_a
-    @_node.to_a
-  end
-
-  def to_h
-    @_node if @_node.is_a? Hash
-  end
-
-  def as_json
-    # when nested in another builder Oj will serialize _node for us
-    @_node
-  end
-
   def to_json
-    # cache the json
-    @_json ||= Oj.dump(@_node)
+    @_oj.to_s
   end
 
   def to_s
     to_json
   end
 
-  def node
-    @_node
-  end
-
   def scope
     @_scope
   end
 
-  def inspect
-    @_node.inspect
-  end
-
   def array(collection = nil, &block)
-    @_node ||= []
-
-    if ! @_node.is_a? Array
-      # call 'value' to implicitly create an outer array
-      value(collection, &block)
-    else
-      if block
-        if collection.nil?
-          yield
-        else
-          collection.each do |item|
-            yield item
-            # we support an implicit call to 'value' if the block calls 'put' to create named values
-            # therefore we need to ensure we always clear out @_object
-            @_object = null
-          end
-        end
+    if block
+      @_key ? @_oj.push_array(@_key) : @_oj.push_array    # open the array (with or without key as required)
+      @_key = nil                                         # clear key
+      save_is_obj = @_is_obj                              # save object serialization state
+      if collection.nil?
+        @_is_obj = nil                                    # clear object serialization state
+        block.call                                        # yield to the block
+        @_oj.pop if @_is_obj                              # automatically close nested objects
       else
-        @_node = collection || []
+        collection.each do |item|                         # serialize each item using the block
+          @_is_obj = nil                                  # clear object state
+          block.call(item)                                # yield item to the block
+          @_oj.pop if @_is_obj                            # automatically close nested objects
+        end
       end
+      @_oj.pop                                            # close the array
+      @_is_obj = save_is_obj                              # restore object serialization state
+    else
+      @_key ?
+        @_oj.push_value(collection, @_key) :              # serialize key and entire collection using Oj
+        @_oj.push_value(collection)                       # serialize entire collection using Oj
     end
-
-    # return the node so that if array is called inside a block we yield the array
-    @_node
   end
 
   def value(value=nil, &block)
-    # resolve the value
-    value = _value(value, &block)
-
-    if @_node.nil?
-      # when node is undefined, calling 'value' just puts an object
-      @_node = value
-    else
-      if ! @_node.is_a? Array
-        # when node is not an array, implicitly create an array containing the current node and the new value
-        @_node = [@_node, value]
-      else
-        # node is an array already, just add value to it
-        @_node << value
-      end
-    end
-
-    # return the node so that the last value in a block yields the array
-    @_node
+    put!(nil, value, &block)                              # serialize the value
   end
 
   def put(key, value=nil, &block)
-    # support an implicit call to 'value' when 'put' is used inside an array block
-    if @_node.is_a? Array
-      unless @_object
-        @_object = ::ActiveSupport::OrderedHash.new
-        @_node << @_object
-      end
-      hash = @_object
-    else
-      @_node ||= ::ActiveSupport::OrderedHash.new
-      hash = @_node
-    end
+    put!(key.to_s, value, &block)                         # serialize the key and value
+  end
 
-    # set the value and return the hash
-    hash[key] = _value(value, &block)
-    hash
+  def put!(key=nil, value=nil, &block)
+    if block
+      @_key ||= key                                       # don't clobber key with nested calls to value()
+      if value.respond_to?(:each) && ! value.is_a?(Hash)  # test for enumerability but don't enumerate hashes
+        array(value, &block)                              # treat as a call to array()
+      else
+        save_is_obj = @_is_obj                            # save object serialization state
+        $_is_obj = nil                                    # clear object serialization state
+        block.call(value)                                 # yield value to the block
+        @_oj.pop if @_is_obj                              # automatically close nested objects
+        @_is_obj = save_is_obj                            # restore object serialization state
+      end
+      @_key = nil                                         # ensure key is cleared regardless of what the block does
+    else
+      if @_key                                            # outer object key present?
+        @_is_obj = true                                   # set object serialization flag
+        @_oj.push_object(@_key)                           # push an object
+        @_key = nil                                       # clear key
+      end
+      key ?
+        @_oj.push_value(value, key) :                     # serialize key and value using Oj
+        @_oj.push_value(value)                            # serialize value using Oj
+    end
   end
 
   def method_missing(method, *args, &block)
@@ -144,22 +115,5 @@ private
   def _copy_ivars(object)
     vars = object.instance_variables - self.instance_variables
     vars.each { |v| instance_variable_set v, object.instance_variable_get(v) }
-  end
-
-  def _value(value, &block)
-    if block
-      begin
-        parent = @_node
-        parent_object = @_object
-        @_node = nil
-        @_object = nil
-        value = value.respond_to?(:each) ? array(value, &block) : yield
-      ensure
-        @_node = parent
-        @_object = parent_object
-      end
-    end
-
-    value
   end
 end
