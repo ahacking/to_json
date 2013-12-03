@@ -44,7 +44,7 @@ class ToJson::Serializer
 
   def to_json
     # cache the json
-    @_json ||= Oj.dump(@_node)
+    @_json ||= Oj.dump(@_node, {mode: :compat})
   end
 
   def to_s
@@ -74,7 +74,7 @@ class ToJson::Serializer
         if collection.nil?
           yield
         else
-          collection.each do |item|
+          for item in collection
             yield item
             # we support an implicit call to 'value' if the block calls 'put' to create named values
             # therefore we need to ensure we always clear out @_object
@@ -153,7 +153,7 @@ private
         parent_object = @_object
         @_node = nil
         @_object = nil
-        value = value.respond_to?(:each) ? array(value, &block) : yield
+        value = value.respond_to?(:each) && ! value.is_a?(Hash) ? array(value, &block) : block.call(value)
       ensure
         @_node = parent
         @_object = parent_object
