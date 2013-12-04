@@ -207,32 +207,45 @@ to emit.
 
 ```ruby
   # args are optional
-  ToJson::Serializer.new(args...) do |args...|
+  ToJson::Serializer.json!(args...) do |args...|
     # DSL goes here, callers methods, helpers, instance variables and constants are all in scope
   end
 end
 ```
 
-### Invocation from Rails controller with block
+### Invocation from Rails controller, respond_with and block
 
 ```ruby
 def index
   @post = Post.first
   # the rails responder will call to_json on the ToJson object
-  respond_with ToJson::Serializer.new do
+  respond_with ToJson::Serializer.encode! do
     # DSL goes here, contoller methods, helpers, instance variables and
     # constants are all in scope
   end
 end
 ```
 
-### Invocation from Rails controller with custom serializer class (recommended)
+### Invocation from Rails API controller, render with block (better)
 
 ```ruby
 def index
-  # just pass the collection (instead of the controller) to better # support
-  # composition of JSON serializers
-  respond_with PostsSerializer.new(Post.all)
+  @post = Post.first
+  # the rails responder will call to_json on the ToJson object
+  render json: ToJson::Serializer.json! do
+    # DSL goes here, contoller methods, helpers, instance variables and
+    # constants are all in scope
+  end
+end
+```
+
+### Invocation from Rails API controller with custom serializer class (recommended)
+
+```ruby
+def index
+  # just pass the collection (instead of the controller) to better support
+  # serializing Posts in different contexts and controllers. @foo is evil
+  render json: PostsSerializer.json!(Post.all)
 end
 ```
 
