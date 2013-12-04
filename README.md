@@ -37,8 +37,8 @@ The following goals were the drivers and rationale behind ToJson:
  + Ability to express any JSON structure with a simple DSL
  + Performance.  Existing solutions spend far too much time generating
 JSON and this costs money and power.  Server hosting is not free and
-needlesly burning power to serve clients because of server rendering
-overhehad is not freindly to the environment.
+needlesly burning power and deploying more servers because of JSON rendering
+overhehad shoule be avoided.
 
 ### Choices
 
@@ -231,7 +231,7 @@ end
 ```ruby
 def index
   @post = Post.first
-  # the rails responder will call to_json on the ToJson object
+  # generate the json and pass it to render for sending to the client
   render json: ToJson::Serializer.json! do
     # DSL goes here, contoller methods, helpers, instance variables and
     # constants are all in scope
@@ -437,7 +437,7 @@ class PostSerializer < ::ToJson::Serializer
 
   # override the build method and use the ToJson DSL
   def serialize
-    serialize_post_with_root scope
+    put_post_nested scope
   end
 end
 
@@ -464,6 +464,12 @@ module PostSerialization
     put :body, post.body
     put :author, fullname(post.author.first_name, post.author.last_name)
     put :comments, CommentsSerializer.new(post.comments)
+  end
+
+  def put_post_nested(post)
+    put :post do
+      put_post(post)
+    end
   end
 
   def serialize_posts(posts)
