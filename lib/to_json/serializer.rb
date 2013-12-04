@@ -14,7 +14,6 @@ module ToJson
     module ClassMethods
       def encode!(*args, &block)
         new.encode!(*args, &block)
-        self
       end
 
       def json!(*args, &block)

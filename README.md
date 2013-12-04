@@ -435,9 +435,10 @@ put :author, fullname(@post.author.first_name, @post.author.last_name)
 class PostSerializer < ::ToJson::Serializer
   include PostSerialization
 
-  # override the build method and use the ToJson DSL
-  def serialize
-    put_post_nested scope
+  # override the serialize method and use the ToJson DSL
+  # any arguments passed to encode! or json! are passed into serialize
+  def serialize(model)
+    put_post_nested model
   end
 end
 
@@ -446,8 +447,8 @@ class PostsSerializer
   include  ::ToJson::Serialize
   include PostSerialization
 
-  def serialize
-    put_posts scope
+  def serialize(collection)
+    put_posts collection
   end
 end
 
