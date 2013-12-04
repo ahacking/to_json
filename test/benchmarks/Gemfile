@@ -1,5 +1,5 @@
 source 'https://rubygems.org'
-gem 'oj'
+gem 'oj', github: 'ohler55/oj'
 gem 'to_json', path: '../..'
 gem 'jbuilder'
 gem 'json_builder'

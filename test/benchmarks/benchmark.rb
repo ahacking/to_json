@@ -37,13 +37,15 @@ Benchmark.bm(15) do |b|
         put :booleans, [true, true, false, nil]
       end
     end
+    s = BenchmarkSerializer.new
     enough.times {
-      BenchmarkSerializer.json!
+      s.json!
     }
   end
   b.report('ToJson (block)') do
+    s = ToJson::Serializer.new
     enough.times {
-      ToJson::Serializer.json! {
+      s.json! {
         put :name, "Garrett Bjerkhoel"
         put :birthday, Time.local(1991, 9, 14)
         put :street do
