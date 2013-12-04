@@ -14,9 +14,11 @@ ToJSON is ORM and ruby web framework agnostic and designed for serving fast and 
 Add this line to your application's Gemfile:
 
 Do this for now:
+
     gem 'to_json', github: 'ahacking/to_json'
 
 Eventually:
+
     gem 'to_json'
 
 And then execute:
@@ -40,19 +42,19 @@ overhehad is not freindly to the environment.
 
 ### Choices
 
-#### Oj
+#### Oj for fast JSON encoding
 
 Leveraging Oj from the start was a deliberate technology choice.  The Oj
 gem is as close to native C as anyone is likely to get in Ruby.
 
-I developed a serializer that built temporary Array and Hash structures
-to be passed to Oj#dump.  This worked well and already was faster than
+I developed a JSON serializer that built temporary Array and Hash structures
+to be passed to Oj#dump.  This worked well and was already faster than
 exisitng JSON serializers. However I thought we could do better...
 
-### Streaming architecture
+#### Streaming architecture
 
 I had the idea that a streaming serializer would be architecturally
-superior (more lexible) and as fast or faster and use less memory than
+superior (more flexible) and as fast (or faster) and use less memory than
 an approach that builds temporary array and hash stuctures.  The Oj author
 also saw merit in the idea and implemented a new StringSerializer to
 support a serialization model where you can push objects in one end and
@@ -61,8 +63,8 @@ be slightly faster than building temporary arrays and hashes in synthetic
 benchmarks but it also results in less memory overhead which will be a
 bigger factor in production systems.
 
-In ToJson, object/models/attributes/hashes/arrays/etc are encoded directly
-into a buffer with as close to native C performance as is possible in ruby.
+In ToJson, models/objects/values/etc are encoded directly into a buffer with
+as close to native C performance as is possible in ruby.
 
 The architectural benefit of a streaming approach is that it paves the way
 for being able to serve and stream massive result sets to sockets and files
@@ -85,7 +87,7 @@ What does this mean?
  + You will not lose the expressiveness and ability to compose and structure
    your serialization code.  Its real ruby classes, not templates.
 
-### Avoid slow language features
+#### Avoid slow language features
 
 ToJson purposefully does not require Ruby language features like
 `method_missing` because it is about 7 times slower than a regular method
@@ -93,7 +95,7 @@ call for very minor syntactical advantage. Whilst that alone does not
 account for the majority of the speed of ToJson, every bit helps when you
 are serializing thosands of objects multiplied by thousands of attributes.
 
-### Avoid magic and be explicit vs implicit
+#### Avoid magic, be explicit vs implicit
 
 To keep the DSL lean and mean, explicitness was favoured over lots of
 ruby meta programming shenanigans.  Being explicit about what model
@@ -109,7 +111,7 @@ flexibility and composition. Flexibility is especially important
 where you need to include attributes from related/parent models, or collect and
 aggregrate model data for presentation in JSON.
 
-### ORM agnostic
+#### ORM agnostic
 
 Being explicit means we are also ORM agnostic.  ToJSON does not care
 what ORM you are using, or what the class of the objects you are
@@ -402,36 +404,6 @@ array do
 end
 ```
 
-### Example of implicit array creation
-
-```ruby
-# calling value here simply creates an object
-value 
-  put total_entries: 123
-end
-# calling 'value' a second time implicitly creates an outer  array
-value 'some string'
-# this will also be nested inside the implicit outer array
-array @posts do
-  put :title, post.title
-  put :body, post.body
-end
-```
-
-### Example of implicit array creation
-
-```ruby
-# serialize an object
-put total_entries: 123
-# calling 'value' here implicitly creates an outer array
-value 'some string'
-# this will also be nested inside the outer array too
-array @posts do
-  put :title, post.title
-  put :body, post.body
-end
-```
-
 ### Example of defining and using a helper
 
 ```ruby
@@ -446,8 +418,8 @@ put :author, fullname(@post.author.first_name, @post.author.last_name)
 
 
 ```ruby
-# A Post model serializer
-class PostSerializer < ToJson::Serializer
+# A Post model serializer, using ::ToJson::Serializer inheritance
+class PostSerializer < ::ToJson::Serializer
   include PostSerialization
 
   # override the build method and use the ToJson DSL
@@ -456,34 +428,29 @@ class PostSerializer < ToJson::Serializer
   end
 end
 
-# A Post collection serializer
-class PostsSerializer < ToJson::Serializer
+# A Post collection serializer using include ToJson::Serialize approach
+class PostsSerializer
+  include  ::ToJson::Serialize
   include PostSerialization
 
   def serialize
-    serialize_posts scope
+    put_posts scope
   end
 end
 
-# define a module so we can mixin Post model serialization code and avoid
-# temporary builder objects for collection items
+# define a module so we can mixin Post model serialization concerns
+anywhere and avoid temporary builder objects for collection items
 module PostSerialization
   # formatting helper
   def fullname(*names)
     names.join(' ')
   end
 
-  def serialize_post(post)
+  def put_post(post)
     put :title, post.title
     put :body, post.body
     put :author, fullname(post.author.first_name, post.author.last_name)
     put :comments, CommentsSerializer.new(post.comments)
-  end
-
-  def serialize_post_with_root(post)
-    put :post do
-      serialize_post post
-    end
   end
 
   def serialize_posts(posts)
@@ -491,7 +458,10 @@ module PostSerialization
       put :total_entries, posts.total_entries
       put :total_pages, posts.total_pages
     end
-    put :collection, posts.each(&:serialize_post)
+    put :collection, posts do |post|
+      put_post post
+    end
+
   end
 end
 ```
