@@ -8,7 +8,7 @@ require 'jbuilder'
 require 'json_builder'
 require 'jsonify'
 
-enough = 50_000
+enough = 500_000
 puts "JSONBuilder original benchmark (#{enough} complex objects):"
 
 Benchmark.bm(15) do |b|
@@ -37,13 +37,15 @@ Benchmark.bm(15) do |b|
         put :booleans, [true, true, false, nil]
       end
     end
+    s = BenchmarkSerializer.new
     enough.times {
-      BenchmarkSerializer.new
+      s.json!
     }
   end
   b.report('ToJson (block)') do
+    s = ToJson::Serializer.new
     enough.times {
-      ToJson::Serializer.new {
+      s.json! {
         put :name, "Garrett Bjerkhoel"
         put :birthday, Time.local(1991, 9, 14)
         put :street do
