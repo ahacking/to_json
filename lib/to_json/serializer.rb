@@ -72,7 +72,7 @@ module ToJson
           block.call                                        # yield to the block
           @_oj.pop if @_is_obj                              # automatically close nested objects
         else
-          for item in collection                            # serialize each item using the block
+          collection.each do |item|                         # serialize each item using the block
             @_is_obj = nil                                  # clear object state
             block.call(item)                                # yield item to the block
             @_oj.pop if @_is_obj                            # automatically close nested objects
