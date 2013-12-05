@@ -187,15 +187,15 @@ probably equivalent to a budget level hosting service:
 ```
 JSONBuilder original benchmark (500000 complex objects):
                       user     system      total        real
-ToJson (class)   39.980000   0.130000  40.110000 ( 40.574657)
-ToJson (block)   39.230000   0.240000  39.470000 ( 40.128738)
-Jbuilder         69.220000   0.370000  69.590000 ( 70.379574)
-JSONBuilder     131.220000   0.700000 131.920000 (133.807568)
-jsonify         341.650000   2.450000 344.100000 (349.124304)
+ToJson (class)   26.100000   0.120000  26.220000 ( 26.514294)
+ToJson (block)   37.930000   0.210000  38.140000 ( 38.448850)
+Jbuilder         68.030000   0.220000  68.250000 ( 68.548044)
+JSONBuilder     129.790000   0.690000 130.480000 (131.566375)
+jsonify         329.320000   1.400000 330.720000 (333.168079)
 ```
 
 As can be seen ToJson is significantly faster than the competition and
-can easily serialize in excess of 12,000 complex JSON objects per second.
+can easily serialize in excess of 18,000 complex JSON objects per second.
 
 TODO. Add benchmarks for ActiveModel::Serializers, ROAR and RABL benchmarks.
 This will likely require a different JSON structure which they are all happy

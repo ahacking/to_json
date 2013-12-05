@@ -32,7 +32,7 @@ module ToJson
 
     def encode!(*args, &block)
       @_scope = args[0]
-      @_is_obj = nil
+      @_obj_depth = 0
       if @_oj
         @_oj.reset
       else
@@ -64,26 +64,24 @@ module ToJson
 
     def array(collection = nil, &block)
       if block
-        @_key ? @_oj.push_array(@_key) : @_oj.push_array    # open the array (with or without key as required)
+        @_oj.push_array(@_key)                              # open the array (with or without key as required)
         @_key = nil                                         # clear key
-        save_is_obj = @_is_obj                              # save object serialization state
+        obj_depth = @_obj_depth                             # save object depth
         if collection.nil?
-          @_is_obj = nil                                    # clear object serialization state
+          @_obj_depth = 0                                   # clear object serialization state
           block.call                                        # yield to the block
-          @_oj.pop if @_is_obj                              # automatically close nested objects
+          @_oj.pop if @_obj_depth > obj_depth               # automatically close nested objects
         else
           collection.each do |item|                         # serialize each item using the block
-            @_is_obj = nil                                  # clear object state
+            @_obj_depth = 0                                 # clear object depth
             block.call(item)                                # yield item to the block
-            @_oj.pop if @_is_obj                            # automatically close nested objects
+            @_oj.pop if @_obj_depth > obj_depth             # automatically close nested objects
           end
         end
         @_oj.pop                                            # close the array
-        @_is_obj = save_is_obj                              # restore object serialization state
+        @_obj_depth = obj_depth                             # restore object depth
       else
-        @_key ?
-          @_oj.push_value(collection, @_key) :              # serialize key and entire collection using Oj
-          @_oj.push_value(collection)                       # serialize entire collection using Oj
+        @_oj.push_value(collection, @_key)                  # serialize collection using Oj with or without key
       end
     end
 
@@ -96,27 +94,33 @@ module ToJson
     end
 
     def put!(key=nil, value=nil, &block)
+      if @_key                                              # existingsaved key?
+        if key                                              # nesting a key under a key forces object creation!
+          @_obj_depth += 1                                  # increase object depth
+          @_oj.push_object(@_key)                           # push start of named object
+        else
+          key = @_key                                       # unstash saved key
+        end
+      end
+
       if block
-        @_key ||= key                                       # don't clobber key with nested calls to value()
+        @_key = key                                         # stash current key for block call
         if value.respond_to?(:each) && ! value.is_a?(Hash)  # test for enumerability but don't enumerate hashes
           array(value, &block)                              # treat as a call to array()
         else
-          save_is_obj = @_is_obj                            # save object serialization state
-          @_is_obj = nil                                    # clear object serialization state
+          obj_depth = @_obj_depth                           # save current object depth to detect object creation
           block.call(value)                                 # yield value to the block
-          @_oj.pop if @_is_obj                              # automatically close nested objects
-          @_is_obj = save_is_obj                            # restore object serialization state
+          @_oj.pop if @_obj_depth > obj_depth               # automatically close any nested object created by block
+          @_obj_depth = obj_depth                           # restore object depth
         end
         @_key = nil                                         # ensure key is cleared regardless of what the block does
       else
-        if @_key                                            # outer object key present?
-          @_is_obj = true                                   # set object serialization flag
-          @_oj.push_object(@_key)                           # push an object
-          @_key = nil                                       # clear key
+        @_key = nil                                         # clear stashed key
+        if key && @_obj_depth == 0                          # key present and no outer object?
+          @_obj_depth += 1                                  # increase object depth
+          @_oj.push_object                                  # push anonymous object
         end
-        key ?
-          @_oj.push_value(value, key) :                     # serialize key and value using Oj
-          @_oj.push_value(value)                            # serialize value using Oj
+        @_oj.push_value(value, key)                         # serialize value using Oj with or without key
       end
     end
 
