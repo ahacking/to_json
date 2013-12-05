@@ -73,9 +73,9 @@ module ToJson
           @_oj.pop if @_obj_depth > obj_depth               # automatically close nested objects
         else
           collection.each do |item|                         # serialize each item using the block
-            @_obj_depth = 0                                 # clear object depth
+            @_obj_depth = 0                                 # reset object depth to zero for array elements
             block.call(item)                                # yield item to the block
-            @_oj.pop if @_obj_depth > obj_depth             # automatically close nested objects
+            @_oj.pop if @_obj_depth > 0                     # automatically close nested objects
           end
         end
         @_oj.pop                                            # close the array
@@ -113,15 +113,14 @@ module ToJson
           @_oj.pop if @_obj_depth > obj_depth               # automatically close any nested object created by block
           @_obj_depth = obj_depth                           # restore object depth
         end
-        @_key = nil                                         # ensure key is cleared regardless of what the block does
       else
-        @_key = nil                                         # clear stashed key
         if key && @_obj_depth == 0                          # key present and no outer object?
           @_obj_depth += 1                                  # increase object depth
           @_oj.push_object                                  # push anonymous object
         end
         @_oj.push_value(value, key)                         # serialize value using Oj with or without key
       end
+      @_key = nil                                           # ensure key is cleared
     end
 
     def method_missing(method, *args, &block)
