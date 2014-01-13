@@ -64,7 +64,7 @@ module ToJson
 
     def array(collection = nil, &block)
       if block
-        @_oj.push_array(@_key)                              # open the array (with or without key as required)
+        @_oj.push_array @_key                               # open the array (with or without key as required)
         @_key = nil                                         # clear key
         obj_depth = @_obj_depth                             # save object depth
         if collection.nil?
@@ -74,30 +74,36 @@ module ToJson
         else
           collection.each do |item|                         # serialize each item using the block
             @_obj_depth = 0                                 # reset object depth to zero for array elements
-            block.call(item)                                # yield item to the block
+            block.call item                                 # yield item to the block
             @_oj.pop if @_obj_depth > 0                     # automatically close nested objects
           end
         end
         @_oj.pop                                            # close the array
         @_obj_depth = obj_depth                             # restore object depth
       else
-        @_oj.push_value(collection, @_key)                  # serialize collection using Oj with or without key
+        @_oj.push_value collection, @_key                   # serialize collection using Oj with or without key
       end
     end
 
     def value(value=nil, &block)
-      put!(nil, value, &block)                              # serialize the value
+      put! nil, value, &block                               # serialize the value
     end
 
     def put(key, value=nil, &block)
-      put!(key.to_s, value, &block)                         # serialize the key and value
+      put! key.to_s, value, &block                          # serialize the key and value
+    end
+
+    def put_using(obj, keys)
+      keys.each do |key|
+        put! key.to_s, obj.send(key)
+      end
     end
 
     def put!(key=nil, value=nil, &block)
       if @_key                                              # existingsaved key?
         if key                                              # nesting a key under a key forces object creation!
           @_obj_depth += 1                                  # increase object depth
-          @_oj.push_object(@_key)                           # push start of named object
+          @_oj.push_object @_key                            # push start of named object
         else
           key = @_key                                       # unstash saved key
         end
@@ -106,7 +112,7 @@ module ToJson
       if block
         @_key = key                                         # stash current key for block call
         if value.respond_to?(:each) && ! value.is_a?(Hash)  # test for enumerability but don't enumerate hashes
-          array(value, &block)                              # treat as a call to array()
+          array value, &block                               # treat as a call to array()
         else
           obj_depth = @_obj_depth                           # save current object depth to detect object creation
           block.call(value)                                 # yield value to the block
@@ -118,19 +124,19 @@ module ToJson
           @_obj_depth += 1                                  # increase object depth
           @_oj.push_object                                  # push anonymous object
         end
-        @_oj.push_value(value, key)                         # serialize value using Oj with or without key
+        @_oj.push_value value, key                          # serialize value using Oj with or without key
       end
       @_key = nil                                           # ensure key is cleared
     end
 
     def method_missing(method, *args, &block)
       # delegate to the scope
-      @_scope.send(method, *args, &block)
+      @_scope.send method, *args, &block
     end
 
     def const_missing(name)
       # delegate to the scope
-      @_scope.class.const_get(name)
+      @_scope.class.const_get name
     end
 
   private
