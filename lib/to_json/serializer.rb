@@ -93,7 +93,7 @@ module ToJson
       put! key.to_s, value, &block                          # serialize the key and value
     end
 
-    def put_using(obj, keys)
+    def put_using(obj, *keys)
       keys.each do |key|
         put! key.to_s, obj.send(key)
       end
@@ -104,8 +104,8 @@ module ToJson
         if key                                              # nesting a key under a key forces object creation!
           @_obj_depth += 1                                  # increase object depth
           @_oj.push_object @_key                            # push start of named object
-        else
           key = @_key                                       # unstash saved key
+        else
         end
       end
 
