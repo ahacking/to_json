@@ -74,10 +74,10 @@ available in Oj.
 #### Avoid templates
 
 ToJson does NOT use a Rails ActionView template approach; instead the DSL is
-intended to be used directly or within your own serializer classes. This means
-ToJson supports all of the expressive power of real Ruby classes including
-inheritence, mixins, delegates etc and DOES NOT need to implement slower
-and less powerful quasi equivalents in a templating language.
+intended to be used directly with a serializer block or within your own serializer
+classes. This means ToJson supports all of the expressive power of real Ruby classes
+including modules, inheritence, mixins, delegates etc and DOES NOT need to implement
+slower and less powerful quasi equivalents in a templating language.
 
 What does this mean?
  + You can easily DRY up your JSON API's
@@ -85,7 +85,7 @@ What does this mean?
  + You can keep your model helpers and formatters nicely namespaced rather than
    global.
  + You will not lose the expressiveness and ability to compose and structure
-   your serialization code.  Its real ruby classes, not templates.
+   your serialization code.  Its 100% ruby, not templates.
 
 #### Avoid slow language features
 
@@ -114,8 +114,8 @@ aggregrate model data for presentation in JSON.
 #### ORM agnostic
 
 Being explicit means we are also ORM agnostic.  ToJSON does not care
-what ORM you are using, or what the class of the objects you are
-serializing are.
+what ORM you are using, or what the class the objects being serialized
+are.
 
 ## ToJson Alternatives
 
@@ -194,12 +194,12 @@ JSONBuilder     129.790000   0.690000 130.480000 (131.566375)
 jsonify         329.320000   1.400000 330.720000 (333.168079)
 ```
 
-As can be seen ToJson is significantly faster than the competition and
+As can be seen ToJson is significantly faster than the alternatives and
 can easily serialize in excess of 18,000 complex JSON objects per second.
 
 TODO. Add benchmarks for ActiveModel::Serializers, ROAR and RABL benchmarks.
-This will likely require a different JSON structure which they are all happy
-to emit.
+This will likely require a different JSON structure which they are all
+capable of producing.
 
 ## Usage
 
@@ -263,13 +263,67 @@ put :title, @post.title
 put :body, @post.body
 ```
 
+#### Example with fields helper
+
+```ruby
+put_fields @post, :title,  :body
+```
+
+#### Example with fields helper and key mapping.
+
+The DSL accepts array pairs, hashes, arrays containing any
+mix of array or hash pairs.
+
+The following examples are all equivalent and map 'title' to 'the_tile'
+and 'created_at' to 'post_date' and leave 'body' as is.
+
+```ruby
+put_fields @post, [:title, :the_title], :body, [:created_at, :post_date]
+put_fields @post, [[:title, :the_title], :body, [:created_at, :post_date]]
+put_fields @post, {title: :the_title, body: nil, created_at: :post_date}
+put_fields @post, [:title, :the_title], :body, {:created_at => :post_date}
+put_fields @post, {title: :the_title}, :body, {created_at: :post_date}
+```
+
+#### Example with fields helper with condition.
+
+There are helpers to serialize object fields conditionally.
+
+```ruby
+put_fields_unless_blank @post, :title: :body
+put_fields_unless_nil @post, :title: :body
+put_fields_unless :large?, @post, :title: :body
+put_fields_if :allowed, @post, :title: :body
+```
+
+#### Example of serializing a single field
+
+There are single field equivalents of the multiple field helpers. these
+take an optional mapping key and just like put they accept a block.
+
+```ruby
+put_field @post, :title
+put_field @post, :title, :the_title
+put_field_unless_blank @post, :title, :the_title
+put_field_unless_nil @post, :title, :the_title
+put_field_unless :large? @post, :body
+put_field_if :allowed? @post, :body
+```
+
 #### Example creating a nested object
+
+The long way:
 
 ```ruby
 put :post do
   put :title, @post.title
   put :body, @post.body
 end
+
+Using field helper:
+
+```ruby
+put :post do put_fields @post, :title :body end
 ```
 
 ### Example of a named object literal
@@ -292,8 +346,7 @@ value {name: 'Fred', email: 'fred@example.com', age: 27}
 
 ```ruby
 put :latest_post, current_user.posts.order(:created_at: :desc).first do |post|
-  put :title, post.title
-  put :body, post.body
+  put_fields post, :title, :body
 end
 ```
 
@@ -381,12 +434,10 @@ end
 
 ```ruby
 put :meta do
-  put :total_entries, @posts.total_entries
-  put :total_pages, @posts.total_pages
+  put_fields @posts, :total_entries, :total_pages
 end
-put :collection, @posts do |post|
-  put :title, post.title
-  put :body, post.body
+put :collection do
+  array @posts do |post| put_fields post, :title, :body end
 end
 put :_links do
   put :self { put :href, url_for(page: @posts.current_page) }

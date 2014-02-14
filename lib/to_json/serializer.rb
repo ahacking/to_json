@@ -62,17 +62,19 @@ module ToJson
       @_scope
     end
 
-    def array(collection = nil, &block)
+    # Put an array
+    def array(*args, &block)
       if block
         @_oj.push_array @_key                               # open the array (with or without key as required)
         @_key = nil                                         # clear key
         obj_depth = @_obj_depth                             # save object depth
-        if collection.nil?
+        if args.count == 0                                  # if no collection just invoke block
           @_obj_depth = 0                                   # clear object serialization state
           block.call                                        # yield to the block
           @_oj.pop if @_obj_depth > obj_depth               # automatically close nested objects
         else
-          collection.each do |item|                         # serialize each item using the block
+          args = args[0] if args.count == 1                 # get array arg otherwise treat as implicit array
+          args && args.each do |item|                       # serialize each item using the block
             @_obj_depth = 0                                 # reset object depth to zero for array elements
             block.call item                                 # yield item to the block
             @_oj.pop if @_obj_depth > 0                     # automatically close nested objects
@@ -81,44 +83,136 @@ module ToJson
         @_oj.pop                                            # close the array
         @_obj_depth = obj_depth                             # restore object depth
       else
-        @_oj.push_value collection, @_key                   # serialize collection using Oj with or without key
+        args = args[0] || [] if args.count == 1             # collection argument, treat nil as empty
+                                                            # all other cases args is implicit array
+        @_oj.push_value args, @_key                         # serialize collection using Oj with or without key
       end
     end
 
+    # Put a value
     def value(value=nil, &block)
       put! nil, value, &block                               # serialize the value
     end
 
+    # Put a named value
     def put(key, value=nil, &block)
       put! key.to_s, value, &block                          # serialize the key and value
     end
 
-    def put_using(obj, *keys)
-      keys.each do |key|
-        put! key.to_s, obj.send(key)
+    #
+    # field helpers
+    #
+
+    # Put an object field unless the value is nil
+    def put_field_unless_nil(obj, field, as=nil, &block)
+      put_field_unless :nil?, obj, field, as, &block
+    end
+
+    # Put an object field unless the value is blank
+    def put_field_unless_blank(obj, field, as=nil, &block)
+      put_field_unless :blank?, obj, field, as, &block
+    end
+
+    # Put an object field unless value condtion is true
+    def put_field_if(condition, obj, field, as=nil, &block)
+      value = obj.send(field)
+      put! (as || field).to_s, value, &block if value.send(condition)
+    end
+
+    # Put an object field if value condition is true
+    def put_field_unless(condition, obj, field, as=nil, &block)
+      value = obj.send(field)
+      put! (as || field).to_s, value, &block unless value.send(condition)
+    end
+
+    # Put an object field
+    def put_field(obj, field, as, &block)
+      put! (as || field).to_s, obj.send(field), &block
+    end
+
+    # Put specified object fields with optional mapping.
+    #
+    # The DSL accepts array pairs, hashes, arrays containing any
+    # mix of array or hash pairs.
+    #
+    # The following examples are all equivalent and map 'title' to 'the_tile'
+    # and 'created_at' to 'post_date' and leave 'body' as is.
+    #
+    # put_fields @post, [:title, :the_title], :body, [:created_at, :post_date]
+    # put_fields @post, [[:title, :the_title], :body, [:created_at, :post_date]]
+    # put_fields @post, {title: :the_title, body: nil, created_at: :post_date}
+    # put_fields @post, [:title, :the_title], :body, {:created_at => :post_date}
+    # put_fields @post, {title: :the_title}, :body, {created_at: :post_date}
+    def put_fields(obj, *keys)
+      keys.each do |key, as|                                # could be any enumerable, type may be nil
+        if key.is_a? Hash
+          put_fields obj, key                               # recurse to expand hash
+        else
+          put! (as || field).to_s, obj.send(field)
+        end
       end
     end
 
+    # Put specified object fields unless blank.
+    #
+    # The field keys can be mapped as per put_fields
+    def put_fields_unless_blank(obj, *keys)
+      put_fields_unless :blank?, obj, *keys
+    end
+
+    # Put specified object fields unless nil.
+    #
+    # The field keys can be mapped as per put_fields
+    def put_fields_unless_nil(obj, *keys)
+      put_fields_unless :nil?, *obj, keys
+    end
+
+    # Put specified object unless the field value condition is true.
+    #
+    # The field keys can be mapped as per put_fields
+    def put_fields_unless(condition, obj, *keys)
+      keys.each do |key, as|                                # could be any enumerable, type may be nil
+        if key.is_a? Hash
+          put_fields_unless condition, obj, key             # recurse to expand hash
+        else
+          put_field_unless condition, obj, key, as
+        end
+      end
+    end
+
+    # Put specified object if field value condition is true.
+    #
+    # The field keys can be mapped as per put_fields.
+    def put_fields_if(condition, obj, *keys)
+      keys.each do |key, as|                                # could be any enumerable, type may be nil
+        if key.is_a? Hash
+          put_fields_if condition, obj, key                 # recurse to expand hash
+        else
+          put_field_if condition, obj, key, as
+        end
+      end
+    end
+
+    #
+    # put object primitive
+    #
+
     def put!(key=nil, value=nil, &block)
-      if @_key                                              # existingsaved key?
+      if @_key                                              # existing saved key?
         if key                                              # nesting a key under a key forces object creation!
           @_obj_depth += 1                                  # increase object depth
           @_oj.push_object @_key                            # push start of named object
-          key = @_key                                       # unstash saved key
         else
+          key = @_key                                       # unstash saved key
         end
       end
 
       if block
         @_key = key                                         # stash current key for block call
-        if value.respond_to?(:each) && ! value.is_a?(Hash)  # test for enumerability but don't enumerate hashes
-          array value, &block                               # treat as a call to array()
-        else
-          obj_depth = @_obj_depth                           # save current object depth to detect object creation
-          block.call(value)                                 # yield value to the block
-          @_oj.pop if @_obj_depth > obj_depth               # automatically close any nested object created by block
-          @_obj_depth = obj_depth                           # restore object depth
-        end
+        obj_depth = @_obj_depth                             # save current object depth to detect object creation
+        block.call(value)                                   # yield value to the block
+        @_oj.pop if @_obj_depth > obj_depth                 # automatically close any nested object created by block
+        @_obj_depth = obj_depth                             # restore object depth
       else
         if key && @_obj_depth == 0                          # key present and no outer object?
           @_obj_depth += 1                                  # increase object depth
