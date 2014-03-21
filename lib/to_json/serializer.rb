@@ -148,7 +148,7 @@ module ToJson
         if key.is_a? Hash
           put_fields obj, key                               # recurse to expand hash
         else
-          put! (as || field).to_s, obj.send(field)
+          put! (as || key).to_s, obj.send(field)
         end
       end
     end
