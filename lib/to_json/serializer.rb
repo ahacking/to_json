@@ -27,7 +27,7 @@ module ToJson
 
     def json!(*args, &block)
       encode!(*args, &block)
-      @_oj.to_s
+      to_json
     end
 
     def encode!(*args, &block)
@@ -69,9 +69,9 @@ module ToJson
         @_key = nil                                         # clear key
         obj_depth = @_obj_depth                             # save object depth
         if args.count == 0                                  # if no collection just invoke block
-          @_obj_depth = 0                                   # clear object serialization state
+          @_obj_depth = 0                                   # reset object depth
           block.call                                        # yield to the block
-          @_oj.pop if @_obj_depth > obj_depth               # automatically close nested objects
+          @_oj.pop if @_obj_depth > 0                       # automatically close nested objects
         else
           args = args[0] if args.count == 1                 # get array arg otherwise treat as implicit array
           args && args.each do |item|                       # serialize each item using the block
@@ -87,6 +87,57 @@ module ToJson
                                                             # all other cases args is implicit array
         @_oj.push_value args, @_key                         # serialize collection using Oj with or without key
       end
+    end
+
+    # Start a JSON array.
+    #
+    # There is normally no need to use this primitive, however it can be useful if the content
+    # of the array is not known in advance and where the array block form cannot be used.
+    #
+    # @example
+    #    open_array
+    #      value 1
+    #      value 2
+    #    close
+    def open_array
+      @_oj.push_array @_key                                 # open the array (with or without key as required)
+      @_key = nil                                           # clear key
+      @_obj_depth += 1
+    end
+
+    # Start a JSON object
+    #
+    # There is normally no need to use this primitive, however it can be useful if the content
+    # of the object is not known in advance and where the put with block methods cannot be used.
+    #
+    # @example
+    #    open 'post'
+    #      put 'id', 1
+    #      put 'title', 'Some title'
+    #      put 'content', 'Amazing post content.'
+    #    close
+    #
+    # @example
+    #    open 'post_ids'
+    #      open array
+    #        value 1
+    #        value 2
+    #      close
+    #    close
+    #
+    def open(key=nil)
+      if @_key || @_obj_depth == 0                          # existing saved key or root/array?
+        @_obj_depth += 1                                    # increase object depth
+        @_oj.push_object @_key                              # push start of object (@_key nil for root/array)
+      end
+      @_key = key                                           # stash/clear key
+    end
+
+    # Close the array/object
+    def close
+      raise EncodingError, 'Already Closed. Invalid to_json DSL detected.' if @_obj_depth < 1
+      @_obj_depth -= 1
+      @_oj.pop                                              # close the array or object
     end
 
     # Put a value
@@ -196,12 +247,11 @@ module ToJson
     #
     # put object primitive
     #
-
     def put!(key=nil, value=nil, &block)
-      if @_key                                              # existing saved key?
-        if key                                              # nesting a key under a key forces object creation!
+      if @_key || @_obj_depth == 0                          # existing saved key or root/array?
+        if key                                              # nesting a key forces object creation!
           @_obj_depth += 1                                  # increase object depth
-          @_oj.push_object @_key                            # push start of named object
+          @_oj.push_object @_key                            # push start of object (@_key nil for root/array)
         else
           key = @_key                                       # unstash saved key
         end
@@ -214,10 +264,6 @@ module ToJson
         @_oj.pop if @_obj_depth > obj_depth                 # automatically close any nested object created by block
         @_obj_depth = obj_depth                             # restore object depth
       else
-        if key && @_obj_depth == 0                          # key present and no outer object?
-          @_obj_depth += 1                                  # increase object depth
-          @_oj.push_object                                  # push anonymous object
-        end
         @_oj.push_value value, key                          # serialize value using Oj with or without key
       end
       @_key = nil                                           # ensure key is cleared
