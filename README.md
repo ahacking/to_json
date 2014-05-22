@@ -194,8 +194,9 @@ JSONBuilder     129.790000   0.690000 130.480000 (131.566375)
 jsonify         329.320000   1.400000 330.720000 (333.168079)
 ```
 
-On a Intel(R) Core(TM) i7-3610QM CPU @ 2.30GHz (Ivy Bridge)
+On a Intel(R) Core(TM) i7-3610QM CPU @ 2.30GHz (Ivy Bridge):
 
+```
 JSONBuilder original benchmark (500000 complex objects):
                       user     system      total        real
 ToJson (class)    7.950000   2.080000  10.030000 ( 10.045144)
@@ -203,6 +204,7 @@ ToJson (block)   14.340000   2.130000  16.470000 ( 16.471651)
 Jbuilder         29.180000   2.600000  31.780000 ( 31.790766)
 JSONBuilder      56.230000   2.820000  59.050000 ( 59.083252)
 jsonify         156.310000   2.700000 159.010000 (159.088787)
+```
 
 As can be seen ToJson is 3 times faster than the fastest alternative and
 can serialize approx 50,000 complex JSON objects per second.
