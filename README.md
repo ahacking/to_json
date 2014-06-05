@@ -366,7 +366,7 @@ end
 
 Arrays provide aggregation in JSON and are created with the `array` method.  Array
 elements can be created through:
-+ a literal value passed to `array` without a block
++ literal value(s) passed to `array` without a block
 + evaluating blocks over the argument passed to array (similar to `each`)
 + evaluating a block with no argument
 
