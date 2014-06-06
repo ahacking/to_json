@@ -1,8 +1,10 @@
 #!/usr/bin/env ruby
 require 'rubygems'
 require 'bundler/setup'
+
 require 'benchmark'
 require 'oj'
+require 'oj_mimic_json'
 require 'to_json'
 require 'jbuilder'
 require 'json_builder'
@@ -69,6 +71,7 @@ Benchmark.bm(15) do |b|
       }
     }
   end
+
   b.report('Jbuilder') do
     enough.times {
       Jbuilder.encode { |json|
@@ -95,6 +98,7 @@ Benchmark.bm(15) do |b|
       }
     }
   end
+
   b.report('JSONBuilder') do
     enough.times {
       JSONBuilder::Compiler.generate {
@@ -121,6 +125,7 @@ Benchmark.bm(15) do |b|
       }
     }
   end
+
   b.report('jsonify') do
     enough.times {
       json = Jsonify::Builder.new
