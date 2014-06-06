@@ -74,7 +74,7 @@ module ToJson
           @_oj.pop if @_obj_depth > 0                       # automatically close nested objects
         else
           items = args[0] if args.count == 1                # assume enumerable if just 1 argument, but
-          items = items.respond_to?(:each) ? items : args   # fallback to implicit array if not enumerable
+          items = items.is_a?(Enumerable) ? items : args    # fallback to implicit array if not Array
           items.each do |item|                              # serialize each item using the block
             @_obj_depth = 0                                 # reset object depth to zero for array elements
             block.call item                                 # yield item to the block
