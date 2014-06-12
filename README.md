@@ -367,7 +367,7 @@ end
 Arrays provide aggregation in JSON and are created with the `array` method.  Array
 elements can be created through:
 + literal value(s) passed to `array` without a block
-+ evaluating blocks over the argument passed to array (similar to `each`)
++ evaluating blocks over the argument passed to array (similar to `each_with_index`)
 + evaluating a block with no argument
 
 Within the array block, array elements can be created using `value`, however this is
@@ -393,10 +393,18 @@ array @posts
 
 ```ruby
 array @posts do |post|
-  # calling put inside an array does an implicit 'value' call
+  # calling put/put_* inside an array does an implicit 'value' call
   # placing all named values into a single object
-  put :title, post.title
-  put :body, post.body
+  put_fields post, :title, post.body
+end
+```
+
+### Example of array with block and item index for custom object serialization
+
+```ruby
+array @posts do |post, index|
+  put_fields post, :title, post.body
+  put :position, index
 end
 ```
 
@@ -407,7 +415,7 @@ serialized.
 
 ```ruby
 array @posts do |post|
-  @post.author.emails do |email|
+  @post.author.emails.each do |email|
     value email.address
   end
 end

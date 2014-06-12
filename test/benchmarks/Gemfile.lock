@@ -2,7 +2,7 @@ PATH
   remote: ../..
   specs:
     to_json (0.0.4)
-      oj (>= 2.5.4)
+      oj (>= 2.9.4)
 
 GEM
   remote: https://rubygems.org/
