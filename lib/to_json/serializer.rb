@@ -179,7 +179,7 @@ module ToJson
     end
 
     # Put an object field
-    def put_field(obj, field, as, &block)
+    def put_field(obj, field, as=nil, &block)
       put! (as || field).to_s, obj.send(field), &block
     end
 
