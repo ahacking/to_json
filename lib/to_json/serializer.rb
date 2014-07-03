@@ -73,13 +73,19 @@ module ToJson
           block.call                                        # yield to the block
           @_oj.pop if @_obj_depth > 0                       # automatically close nested objects
         else
-          items = args[0] if args.count == 1                # assume enumerable if just 1 argument, but
-          items = items.respond_to?(:each_with_index) ?     # fallback to implicit array if not quacking like Array
-                    items : args
-          items.each_with_index do |item, index|            # serialize each item using the block
-            @_obj_depth = 0                                 # reset object depth to zero for array elements
-            block.call item, index                          # yield item to the block
-            @_oj.pop if @_obj_depth > 0                     # automatically close nested objects
+          items = args.count == 1 ? Array(args[0]) : args   # use array item or implicit literal array
+          if block.arity == 2
+            items.each_with_index do |item,index|           # serialize each item using the block
+              @_obj_depth = 0                               # reset object depth to zero for array elements
+              block.call item, index                        # yield item and index to the block
+              @_oj.pop if @_obj_depth > 0                   # automatically close nested objects
+            end
+          else
+            items.each do |item|                            # serialize each item using the block
+              @_obj_depth = 0                               # reset object depth to zero for array elements
+              block.call item                               # yield item to the block
+              @_oj.pop if @_obj_depth > 0                   # automatically close nested objects
+            end
           end
         end
         @_oj.pop                                            # close the array
