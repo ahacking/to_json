@@ -1,13 +1,17 @@
 # ToJson
 
-A performant Ruby JSON Serializer DSL for Oj. ToJSON uses the brand new
+A performant Ruby JSON Serializer DSL for Oj. ToJson uses the brand new
 Oj StringSerializer to provide the fastest performance and lowest
 possible memory footprint.
 
 Why? Because current Ruby JSON serialisers take too long and use too
 much memory or can't express **all** valid JSON structures.
 
-ToJSON is ORM and ruby web framework agnostic and designed for serving fast and flexible JSON APIs.
+ToJson is ORM and ruby web framework agnostic and designed for serving fast
+and flexible JSON APIs.
+
+ToJson is able to serialize an impressive 1.4 million operations a second
+on a 4 core laptop when running multiple ruby processes.
 
 ## Installation
 
@@ -37,10 +41,10 @@ The following goals were the drivers and rationale behind ToJson:
  + Ability to express any JSON structure with a simple DSL
  + Performance.  Existing solutions spend far too much time generating
 JSON and this costs money and power.  Server hosting is not free and
-needlesly burning power and deploying more servers because of JSON rendering
-overhehad shoule be avoided.
+needlesly burning power and deploying more servers because of rendering
+overhehad should be avoided.
 
-### Choices
+### Design Choices
 
 #### Oj for fast JSON encoding
 
@@ -95,7 +99,7 @@ call for very minor syntactical advantage. Whilst that alone does not
 account for the majority of the speed of ToJson, every bit helps when you
 are serializing thosands of objects multiplied by thousands of attributes.
 
-#### Avoid magic, be explicit vs implicit
+#### Avoid magic, be explicit, not implicit
 
 To keep the DSL lean and mean, explicitness was favoured over lots of
 ruby meta programming shenanigans.  Being explicit about what model
@@ -104,18 +108,17 @@ and naturally perform any data presentation formatting without a DSL escape
 clause, and more importantly without muddying up your models with presentation
 concerns.
 
-Keeping the DSL simpler also made it faster and as a user of ToJSON it
-leads to a better structuring and separation of concerns in your models. It
-also avoids assuming a 'current model' as some DSL's do which further harms
-flexibility and composition. Flexibility is especially important
-where you need to include attributes from related/parent models, or collect and
-aggregrate model data for presentation in JSON.
+Keeping the DSL simpler also made it faster and as a user of ToJson it
+leads to a better structuring and separation of concerns. It also avoids
+assuming a 'current model' as some DSL's do which further harms flexibility
+and composition. Flexibility is especially important where you need to include
+attributes from related/parent models, or collect and aggregrate model data for
+presentation in JSON.
 
 #### ORM agnostic
 
-Being explicit means we are also ORM agnostic.  ToJSON does not care
-what ORM you are using, or what the class the objects being serialized
-are.
+Being explicit means we are also ORM agnostic.  ToJson does not care
+what ORM you are using, or what class the objects being serialized are.
 
 ## ToJson Alternatives
 
@@ -150,14 +153,14 @@ Some alternatives to ToJson and primary diferences.
  + Why?
 
 ### ToJson vs ROAR
- + `extend` your model instances and invalidates the Ruby method cache (a perfomance
-   killer).
- + Requires lambdas in the serializer class, if using ROAR's decorator approach to
-   avoid the extend problem
+ + ROAR `extend`s your model instances and invalidates the Ruby method cache which
+   is a perfomance killer
+ + If using ROAR's decorator approach to avoid the extend problem you must use lambdas
+   in the serializer class
  + Tries to be declarative
  + Very limited control over expression of JSON structure
  + ROAR provides bi-directional serialization
- + Explicit support for JSON+HAL, but see ToJSON example below
+ + Explicit support for JSON+HAL, but see ToJson example below
 
 ### ToJson vs JSONBuilder
  + JSONBuilder is very slow (but not as slow as Jsonify)
@@ -166,7 +169,7 @@ Some alternatives to ToJson and primary diferences.
 ### ToJson vs Jsonify
  + Jsonify is the slowest JSON serialization option I am aware of
  + DSL relys on method_missing for the JSON attribute names
- + Jsonify uses a builder model as opposed to JSON serializer classes
+ + Jsonify uses a builder model as opposed to serializer classes
  + Jsonify supports rails template integration through a companion gem
  + Jsonify provides Tilt based view integration
 
@@ -181,20 +184,37 @@ $ bundle install
 $ ./benchmark.rb
 ```
 
-On a 2006 era Macbook Pro the following timings are reported which is
-probably equivalent to a budget level hosting service:
-
-```
-JSONBuilder original benchmark (500000 complex objects):
-                      user     system      total        real
-ToJson (class)   26.100000   0.120000  26.220000 ( 26.514294)
-ToJson (block)   37.930000   0.210000  38.140000 ( 38.448850)
-Jbuilder         68.030000   0.220000  68.250000 ( 68.548044)
-JSONBuilder     129.790000   0.690000 130.480000 (131.566375)
-jsonify         329.320000   1.400000 330.720000 (333.168079)
-```
-
 On a Intel(R) Core(TM) i7-3610QM CPU @ 2.30GHz (Ivy Bridge):
+
+```
+Serialize 500,000 objects separately:
+                               user     system      total         real
+ToJson (class) - simple    1.330000   0.000000   1.330000 (  1.324826)
+ToJson (class) - parallel  0.000000   0.010000  42.880000 (  5.459818)
+(8000000 ops)
+ToJson (class) - complex   5.000000   0.000000   5.000000 (  5.012555)
+ToJson (block) - simple    5.190000   0.000000   5.190000 (  5.191536)
+ToJson (block) - complex   9.390000   0.000000   9.390000 (  9.390543)
+Jbuilder - simple          6.180000   0.000000   6.180000 (  6.182140)
+Jbuilder - complex        22.600000   2.240000  24.840000 ( 24.861366)
+```
+
+The real time used is the important figure. As can be seen ToJson using a
+class based serializer is 4.7 times faster than the fastest alternative.
+
+The benchmark invokes to_json each time as would be the case serving separate
+requests. Invoked this way is worst case vs a single large result, however
+it is able to serialize 377 thousand address objects per second per CPU, and
+just under 100 thousand complex objects a second per CPU.
+
+On a multi-core machine running the benchmark in 32 separate ruby processes
+to_json gives impressive throughput. ToJson is able able to serialize
+1.4 million individual address serializations per second on a 4 core Intel
+laptop (i7-3610QM CPU @ 2.30GHz Ivy Bridge). Performance is linear and in
+real applications disk and network I/O will be the limiting factor.
+
+
+Old benchmark results for posterity:
 
 ```
 JSONBuilder original benchmark (500000 complex objects):
@@ -206,12 +226,10 @@ JSONBuilder      56.230000   2.820000  59.050000 ( 59.083252)
 jsonify         156.310000   2.700000 159.010000 (159.088787)
 ```
 
-As can be seen ToJson is 3 times faster than the fastest alternative and
-can serialize approx 50,000 complex JSON objects per second.
-
 TODO. Add benchmarks for ActiveModel::Serializers, ROAR and RABL benchmarks.
-This will likely require a different JSON structure which they are all
+This will require a different JSON structure which they are all
 capable of producing.
+
 
 ## Usage
 
@@ -229,7 +247,7 @@ end
 
 ```ruby
 def index
-  @post = Post.first
+  @post = Post.all
   # the rails responder will call to_json on the ToJson object
   respond_with ToJson::Serializer.encode! do
     # DSL goes here, contoller methods, helpers, instance variables and
@@ -242,7 +260,7 @@ end
 
 ```ruby
 def index
-  @post = Post.first
+  @post = Post.all
   # generate the json and pass it to render for sending to the client
   render json: ToJson::Serializer.json! do
     # DSL goes here, contoller methods, helpers, instance variables and
@@ -340,7 +358,7 @@ put :post do put_fields @post, :title :body end
 
 ### Example of a named object literal
 
-The hash value under 'author' will be serialized by Oj.
+The hash value under 'author' will be serialized directly by Oj.
 
 ```ruby
 put :author, {name: 'Fred', email: 'fred@example.com', age: 27}
@@ -515,7 +533,6 @@ end
 
 # A Post collection serializer using include ToJson::Serialize approach
 class PostsSerializer
-  include  ::ToJson::Serialize
   include PostSerialization
 
   def serialize(collection)
@@ -524,8 +541,10 @@ class PostsSerializer
 end
 
 # define a module so we can mixin Post model serialization concerns
-anywhere and avoid temporary builder objects for collection items
+anywhere and avoid temporary serializer objects for collection items
 module PostSerialization
+  include  ::ToJson::Serialize
+
   # formatting helper
   def fullname(*names)
     names.join(' ')
