@@ -36,7 +36,7 @@ module ToJson
       if @_oj
         @_oj.reset
       else
-        @_oj = Oj::StringWriter.new({mode: :compat})
+        @_oj = Oj::StringWriter.new(:mode => :compat)
       end
       serialize(*args, &block)
       @_oj.pop_all
