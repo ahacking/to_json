@@ -223,7 +223,7 @@ module ToJson
     #
     # The field keys can be mapped as per put_fields
     def put_fields_unless_nil(obj, *keys)
-      put_fields_unless :nil?, *obj, keys
+      put_fields_unless :nil?, obj, *keys
     end
 
     # Put specified object unless the field value condition is true.
