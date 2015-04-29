@@ -36,7 +36,7 @@ module ToJson
       if @_oj
         @_oj.reset
       else
-        @_oj = Oj::StringWriter.new({mode: :compat})
+        @_oj = Oj::StringWriter.new(:mode => :compat)
       end
       serialize(*args, &block)
       @_oj.pop_all
@@ -175,18 +175,18 @@ module ToJson
     # Put an object field unless value condtion is true
     def put_field_if(condition, obj, field, as=nil, &block)
       value = obj.send(field)
-      put! (as || field).to_s, value, &block if value.send(condition)
+      put!((as || field).to_s, value, &block) if value.send(condition)
     end
 
     # Put an object field if value condition is true
     def put_field_unless(condition, obj, field, as=nil, &block)
       value = obj.send(field)
-      put! (as || field).to_s, value, &block unless value.send(condition)
+      put!((as || field).to_s, value, &block) unless value.send(condition)
     end
 
     # Put an object field
     def put_field(obj, field, as=nil, &block)
-      put! (as || field).to_s, obj.send(field), &block
+      put!((as || field).to_s, obj.send(field), &block)
     end
 
     # Put specified object fields with optional mapping.
@@ -207,7 +207,7 @@ module ToJson
         if key.is_a? Hash
           put_fields obj, key                               # recurse to expand hash
         else
-          put! (as || key).to_s, obj.send(key)
+          put!((as || key).to_s, obj.send(key))
         end
       end
     end
@@ -223,7 +223,7 @@ module ToJson
     #
     # The field keys can be mapped as per put_fields
     def put_fields_unless_nil(obj, *keys)
-      put_fields_unless :nil?, *obj, keys
+      put_fields_unless :nil?, obj, *keys
     end
 
     # Put specified object unless the field value condition is true.
