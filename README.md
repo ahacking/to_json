@@ -282,7 +282,7 @@ end
 ### JSON Objects
 
 The `put` method is used to serialize named object values and
-create arbitarily nested objects.
+create arbitrarily nested objects.
 
 All values will be serialized according to Oj processing rules.
 
